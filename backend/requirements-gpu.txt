@@ -1,0 +1,12 @@
+# GPU-specific requirements for RTX 3050
+# Install CUDA 12.1 and cuDNN 8.9+ first
+# Then install PyTorch with CUDA support:
+# pip install -r requirements-gpu.txt
+
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+# CPU-only torch (remove if using GPU above)
+# torch>=2.0.0+cpu
+# torchvision>=0.15.0+cpu
+# torchaudio>=2.0.0+cpu

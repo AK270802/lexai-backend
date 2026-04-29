@@ -1,0 +1,34 @@
+# Node
+node_modules
+.next
+.git
+Dockerfile
+docker-compose*
+
+# Python
+__pycache__
+*.pyc
+
+# Git
+.git
+
+# Env
+.env*
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+
+# Build
+dist
+build
+coverage
+
+# Huge files
+*.zip
+*.tar
+*.pt
+*.onnx
+*.ckpt
