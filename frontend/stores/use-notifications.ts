@@ -1,84 +1,78 @@
 import { create } from 'zustand';
-import api from '@/lib/axios';
-import { WSClient } from '@/lib/ws';
+import { notificationsApi } from '@/lib/api/notifications';
+import type { Notification } from '@/lib/types';
 
-export type Notification = {
-  id: string;
-  type: string;
-  title: string;
-  body: string;
-  data: any;
-  read_at: string | null;
-  created_at: string;
-};
+const WS_BASE = process.env.NEXT_PUBLIC_WS_URL ?? 'ws://localhost:8000';
 
-type State = {
-  unreadCount: number;
+interface NotificationsState {
   items: Notification[];
-  wsStatus: 'connected' | 'disconnected' | 'error';
-  ws: WSClient | null;
-
+  unreadCount: number;
+  isConnected: boolean;
   fetch: () => Promise<void>;
   connect: () => void;
   disconnect: () => void;
   markRead: (id: string) => Promise<void>;
   markAllRead: () => Promise<void>;
-};
+  addItem: (n: Notification) => void;
+}
 
-export const useNotifications = create<State>((set, get) => ({
-  unreadCount: 0,
+let ws: WebSocket | null = null;
+
+export const useNotifications = create<NotificationsState>((set) => ({
   items: [],
-  wsStatus: 'disconnected',
-  ws: null,
+  unreadCount: 0,
+  isConnected: false,
 
   fetch: async () => {
-    const res = await api.get('/notifications/');
-    set({ unreadCount: res.data.unread_count || 0, items: res.data.results || [] });
+    try {
+      const data = await notificationsApi.list();
+      set({ items: data.results, unreadCount: data.unread_count });
+    } catch {
+      // silent
+    }
   },
 
   connect: () => {
-    if (get().ws) return;
-    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+    if (ws && ws.readyState === WebSocket.OPEN) return;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : '';
     if (!token) return;
-    const base = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws';
-    const url = `${base}/notifications/?token=${encodeURIComponent(token)}`;
 
-    const ws = new WSClient(
-      url,
-      (msg) => {
+    ws = new WebSocket(`${WS_BASE}/ws/notifications/?token=${token}`);
+    ws.onopen = () => set({ isConnected: true });
+    ws.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data as string);
         if (msg.type === 'notification.created') {
-          set((s) => ({
-            unreadCount: s.unreadCount + 1,
-            items: [msg.notification as Notification, ...s.items].slice(0, 50),
-          }));
+          const n = msg.payload as Notification;
+          set((s) => ({ items: [n, ...s.items], unreadCount: s.unreadCount + 1 }));
         }
-      },
-      (st) => set({ wsStatus: st })
-    );
-    ws.connect();
-    set({ ws });
+      } catch { /* ignore */ }
+    };
+    ws.onclose = () => { set({ isConnected: false }); ws = null; };
+    ws.onerror = () => { ws?.close(); };
   },
 
   disconnect: () => {
-    get().ws?.disconnect();
-    set({ ws: null, wsStatus: 'disconnected' });
+    ws?.close();
+    ws = null;
+    set({ isConnected: false });
   },
 
-  markRead: async (id: string) => {
-    await api.post(`/notifications/${id}/read/`);
-    set((s) => {
-      const items = s.items.map((n) => (n.id === id ? { ...n, read_at: new Date().toISOString() } : n));
-      const unreadCount = Math.max(0, items.filter((n) => !n.read_at).length);
-      return { items, unreadCount };
-    });
+  markRead: async (id) => {
+    await notificationsApi.markRead(id);
+    set((s) => ({
+      items: s.items.map((n) => (n.id === id ? { ...n, read_at: new Date().toISOString() } : n)),
+      unreadCount: Math.max(0, s.unreadCount - 1),
+    }));
   },
 
   markAllRead: async () => {
-    await api.post('/notifications/read-all/');
+    await notificationsApi.markAllRead();
     set((s) => ({
+      items: s.items.map((n) => ({ ...n, read_at: n.read_at ?? new Date().toISOString() })),
       unreadCount: 0,
-      items: s.items.map((n) => ({ ...n, read_at: n.read_at || new Date().toISOString() })),
     }));
   },
-}));
 
+  addItem: (n) => set((s) => ({ items: [n, ...s.items], unreadCount: s.unreadCount + 1 })),
+}));
