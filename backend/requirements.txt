@@ -31,3 +31,6 @@ pytest-django
 torch
 torchvision
 torchaudio
+
+
+requests

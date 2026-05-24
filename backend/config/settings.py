@@ -14,7 +14,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Read .env file from the root directory
 environ.Env.read_env(os.path.join(BASE_DIR.parent, '.env'))
 
-SECRET_KEY = env('DJANGO_SECRET_KEY', default='django-insecure-default-key')
+SECRET_KEY = env('DJANGO_SECRET_KEY')  # no default — crash loudly if missing
 DEBUG = env('DJANGO_DEBUG', default=True)
 ALLOWED_HOSTS = env('ALLOWED_HOSTS', default=['*'])
 

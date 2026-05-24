@@ -20,15 +20,15 @@ class LLMRouter:
     def _get_config(self) -> Dict[str, Any]:
         """Load configuration from Organization settings or environment variables."""
         default_config = {
-            "provider": os.getenv("DEFAULT_LLM_PROVIDER", "ollama"),
+            "provider": os.getenv("DEFAULT_LLM_PROVIDER", "openrouter"),
             "ollama_host": os.getenv("OLLAMA_HOST", "http://localhost:11434"),
             "openrouter_api_key": os.getenv("OPENROUTER_API_KEY"),
             "openrouter_base_url": os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
             "models": {
-                "research": os.getenv("MODEL_RESEARCH", "llama3"),
-                "extraction": os.getenv("MODEL_EXTRACTION", "llama3"),
-                "drafting": os.getenv("MODEL_DRAFTING", "llama3"),
-                "embedding": os.getenv("MODEL_EMBEDDING", "nomic-embed-text"),
+                "research": os.getenv("MODEL_RESEARCH", "meta-llama/llama-3.2-3b-instruct:free"),
+                "extraction": os.getenv("MODEL_EXTRACTION", "meta-llama/llama-3.2-3b-instruct:free"),
+                "drafting": os.getenv("MODEL_DRAFTING", "meta-llama/llama-3.2-3b-instruct:free"),
+                "embedding": os.getenv("MODEL_EMBEDDING", "nvidia/llama-nemotron-embed-vl-1b-v2:free"),
             }
         }
 
@@ -120,13 +120,100 @@ class LLMRouter:
             raise
 
     def embed(self, text: str) -> List[float]:
-        """Generate embeddings using Ollama (always)."""
+        """Generate embeddings."""
+        
+        import requests
+    
         model = self.config["models"]["embedding"]
+    
         try:
-            # We always use Ollama for embeddings as per requirements
-            client = ollama.Client(host=self.config["ollama_host"])
-            response = client.embeddings(model=model, prompt=text)
-            return response['embedding']
+            if self.provider == "openrouter":
+            
+                # NVIDIA multimodal embedding model
+                if "nvidia/llama-nemotron-embed-vl" in model:
+                
+                    response = requests.post(
+                        f"{self.config['openrouter_base_url']}/embeddings",
+                        headers={
+                            "Authorization": f"Bearer {self.config['openrouter_api_key']}",
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "model": model,
+                            "input": [
+                                {
+                                    "content": [
+                                        {
+                                            "type": "text",
+                                            "text": text[:20000]
+                                        }
+                                    ]
+                                }
+                            ],
+                            "encoding_format": "float"
+                        },
+                        timeout=120
+                    )
+    
+                    response.raise_for_status()
+    
+                    data = response.json()
+    
+                    if not data.get("data"):
+                        raise ValueError(
+                            f"No embedding data received from model: {model}. "
+                            f"Response: {data}"
+                        )
+    
+                    embedding = data["data"][0]["embedding"]
+    
+                else:
+                
+                    response = self.openrouter_client.embeddings.create(
+                        model=model,
+                        input=text[:20000]
+                    )
+    
+                    if not response.data:
+                        raise ValueError(
+                            f"No embedding data received from model: {model}"
+                        )
+    
+                    embedding = response.data[0].embedding
+    
+                if not embedding:
+                    raise ValueError(
+                        f"Empty embedding returned from model: {model}"
+                    )
+    
+                return embedding
+    
+            elif self.provider == "ollama":
+            
+                client = ollama.Client(
+                    host=self.config["ollama_host"]
+                )
+    
+                response = client.embed(
+                    model=model,
+                    input=text[:20000]
+                )
+    
+                embeddings = response.get("embeddings")
+    
+                if not embeddings:
+                    raise ValueError(
+                        f"No embeddings returned from Ollama model: {model}"
+                    )
+    
+                return embeddings[0]
+    
+            else:
+                raise ValueError(
+                    f"Unsupported embedding provider: {self.provider}"
+                )
+    
         except Exception as e:
-            logger.error(f"LLM Embedding error: {str(e)}")
+            logger.exception(f"LLM Embedding error: {str(e)}")
             raise
+        

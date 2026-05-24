@@ -53,15 +53,15 @@ services:
     networks:
       - lexai-network
 
-  ollama:
-    image: ollama/ollama:latest
-    container_name: lexai-ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    networks:
-      - lexai-network
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: lexai-ollama
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   networks:
+  #     - lexai-network
 
   backend:
     build:
@@ -72,6 +72,7 @@ services:
     volumes:
       - ./backend:/app
     environment:
+      - DJANGO_SECRET_KEY=django-insecure-super-secret-key-change-me  
       - DATABASE_URL=postgres://${POSTGRES_USER:-lexai}:${POSTGRES_PASSWORD:-lexai}@db:5432/${POSTGRES_DB:-lexai}
       - POSTGRES_DB=${POSTGRES_DB:-lexai}
       - POSTGRES_USER=${POSTGRES_USER:-lexai}
@@ -82,7 +83,9 @@ services:
       - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-lexai}
       - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-lexai_secret}
       - QDRANT_HOST=http://qdrant:6333
-      - OLLAMA_HOST=http://ollama:11434
+      - DEFAULT_LLM_PROVIDER=openrouter
+      - OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+      - OPENROUTER_API_KEY=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
       - FRONTEND_URL=http://localhost:3000
     depends_on:
       db:
@@ -103,6 +106,7 @@ services:
     volumes:
       - ./backend:/app
     environment:
+      - DJANGO_SECRET_KEY=django-insecure-super-secret-key-change-me  
       - DATABASE_URL=postgres://${POSTGRES_USER:-lexai}:${POSTGRES_PASSWORD:-lexai}@db:5432/${POSTGRES_DB:-lexai}
       - POSTGRES_DB=${POSTGRES_DB:-lexai}
       - POSTGRES_USER=${POSTGRES_USER:-lexai}
@@ -113,7 +117,9 @@ services:
       - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-lexai}
       - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-lexai_secret}
       - QDRANT_HOST=http://qdrant:6333
-      - OLLAMA_HOST=http://ollama:11434
+      - DEFAULT_LLM_PROVIDER=openrouter
+      - OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+      - OPENROUTER_API_KEY=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
       - FRONTEND_URL=http://localhost:3000
     deploy:
       resources:
@@ -150,4 +156,3 @@ volumes:
   postgres_data:
   minio_data:
   qdrant_data:
-  ollama_data:

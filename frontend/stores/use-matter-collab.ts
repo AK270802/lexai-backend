@@ -33,7 +33,7 @@ export const useMatterCollab = create<MatterCollabState>((set, get) => ({
     const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : '';
     if (!token) return;
 
-    ws = new WebSocket(`${WS_BASE}/ws/matters/${matterId}/?token=${token}`);
+    ws = new WebSocket(`${WS_BASE}/matters/${matterId}/?token=${token}`);
 
     ws.onopen = () => set({ wsStatus: 'connected', matterId, participants: [] });
 
