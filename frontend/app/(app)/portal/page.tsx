@@ -124,7 +124,7 @@ function TokenResult({ token, onDismiss }: TokenResultProps) {
       {/* URL */}
       <div className="space-y-1.5">
         <Label className="text-xs text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">Portal URL</Label>
-        <div className="flex items-center gap-2 rounded-lg border border-emerald-200 dark:border-emerald-700 bg-white dark:bg-zinc-900 px-3 py-3">
+        <div className="flex items-center gap-2 rounded-lg border border-emerald-200 dark:border-emerald-700 bg-card px-3 py-3">
           <Globe className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
           <span className="flex-1 text-sm font-mono text-foreground break-all">{url}</span>
           <div className="flex items-center gap-2 flex-shrink-0">
