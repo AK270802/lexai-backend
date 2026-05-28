@@ -172,10 +172,10 @@ function Breadcrumbs({ pathname }: { pathname: string }) {
   const isNested = pathname !== basePath;
 
   const subLabel = (() => {
-    if (pathname.startsWith('/matters/') && pathname.includes('/') && segments.length > 2) return 'Matter Detail';
+    if (pathname.startsWith('/matters/new')) return 'New Matter';
+    if (pathname.startsWith('/matters/') && segments.length >= 2) return 'Matter Detail';
     if (pathname.startsWith('/contracts/')) return 'Contract Review';
     if (pathname.startsWith('/documents/upload')) return 'Upload';
-    if (pathname.startsWith('/matters/new')) return 'New Matter';
     return null;
   })();
 
