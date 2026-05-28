@@ -8,6 +8,8 @@ from apps.documents.models import Document
 from apps.contracts.serializers import ContractClauseSerializer, RedlineSerializer, CreateRedlineSerializer
 from services.storage import StorageService
 from services.audit_service import log_audit
+from services.llmrouter import LLMRouter
+from services.contract_intelligence import detect_missing_clauses
 
 
 class ContractDetailView(APIView):
@@ -103,3 +105,44 @@ class ContractRedlineAcceptView(_RedlineStatusUpdateBase):
 
 class ContractRedlineRejectView(_RedlineStatusUpdateBase):
     new_status = 'rejected'
+
+
+class ContractMissingClausesView(APIView):
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request, id):
+        document = get_object_or_404(Document, id=id, organization=request.user.organization)
+
+        if document.parse_status != 'completed':
+            return Response({'missing': []})
+
+        found_types = list(
+            ContractClause.objects.filter(document=document)
+            .values_list('clause_type', flat=True)
+            .distinct()
+        )
+
+        meta = document.metadata or {}
+        doc_type = meta.get('document_type', '') or _infer_doc_type(document.file_name)
+
+        try:
+            router = LLMRouter(organization_id=str(request.user.organization_id))
+            missing = detect_missing_clauses(router, doc_type, found_types)
+            return Response({'missing': missing, 'document_type': doc_type})
+        except Exception as e:
+            return Response({'missing': [], 'error': str(e)})
+
+
+def _infer_doc_type(file_name: str) -> str:
+    name = file_name.lower()
+    if 'nda' in name or 'non-disclosure' in name or 'confidential' in name:
+        return 'NDA'
+    if 'msa' in name or 'master service' in name:
+        return 'MSA'
+    if 'employment' in name or 'offer letter' in name:
+        return 'Employment Agreement'
+    if 'service' in name:
+        return 'Service Agreement'
+    if 'lease' in name or 'tenancy' in name:
+        return 'Lease Agreement'
+    return 'agreement'
