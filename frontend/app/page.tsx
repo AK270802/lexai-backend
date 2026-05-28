@@ -177,7 +177,7 @@ function MockDashboard() {
             <Search className="w-3 h-3 text-violet-400" />
             <span className="text-[10px] font-semibold text-violet-300">Legal Research</span>
           </div>
-          <div className="text-[10px] text-white/50 leading-relaxed">"Force majeure in SaaS contracts under NY law..."</div>
+          <div className="text-[10px] text-white/50 leading-relaxed">&ldquo;Force majeure in SaaS contracts under NY law...&rdquo;</div>
           <div className="mt-2 flex items-center gap-1">
             <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
             <span className="text-[9px] text-violet-400/70">Streaming response...</span>
