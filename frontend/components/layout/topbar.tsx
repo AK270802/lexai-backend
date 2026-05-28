@@ -158,6 +158,42 @@ function ThemeToggle() {
   );
 }
 
+function Breadcrumbs({ pathname }: { pathname: string }) {
+  const segments = pathname.split('/').filter(Boolean);
+
+  // Build breadcrumb items: find first matching base path, then any sub-segments
+  const base = Object.entries(PAGE_TITLES).find(([path]) =>
+    pathname === path || pathname.startsWith(path + '/')
+  );
+
+  if (!base) return <h1 className="text-sm font-semibold text-foreground">LexAI</h1>;
+
+  const [basePath, baseLabel] = base;
+  const isNested = pathname !== basePath;
+
+  const subLabel = (() => {
+    if (pathname.startsWith('/matters/') && pathname.includes('/') && segments.length > 2) return 'Matter Detail';
+    if (pathname.startsWith('/contracts/')) return 'Contract Review';
+    if (pathname.startsWith('/documents/upload')) return 'Upload';
+    if (pathname.startsWith('/matters/new')) return 'New Matter';
+    return null;
+  })();
+
+  return (
+    <div className="flex items-center gap-1.5 text-sm">
+      <h1 className={cn('font-semibold', isNested ? 'text-muted-foreground' : 'text-foreground')}>
+        {baseLabel}
+      </h1>
+      {isNested && subLabel && (
+        <>
+          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground/50 rotate-[-90deg]" />
+          <span className="font-semibold text-foreground">{subLabel}</span>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function Topbar() {
   const pathname = usePathname();
   const { user } = useAuth();
@@ -165,21 +201,11 @@ export function Topbar() {
   const { openCommandPalette } = useUI();
   const [notifOpen, setNotifOpen] = useState(false);
 
-  const title = Object.entries(PAGE_TITLES).find(([path]) =>
-    pathname === path || pathname.startsWith(path + '/')
-  )?.[1] ?? 'LexAI';
-
   return (
     <header className="h-[56px] flex items-center justify-between px-6 border-b border-border bg-background/95 backdrop-blur-sm shrink-0 z-40">
-      {/* Left: page title */}
+      {/* Left: breadcrumbs */}
       <div className="flex items-center gap-3">
-        <h1 className="text-sm font-semibold text-foreground">{title}</h1>
-        {pathname.includes('/matters/') && (
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <span className="text-xs">/</span>
-            <span className="text-xs">Matter Detail</span>
-          </div>
-        )}
+        <Breadcrumbs pathname={pathname} />
       </div>
 
       {/* Right: actions */}

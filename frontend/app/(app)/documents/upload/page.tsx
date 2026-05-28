@@ -117,8 +117,8 @@ function DropZone({ onFiles, disabled }: DropZoneProps) {
       className={cn(
         'relative border-2 border-dashed rounded-xl p-12 text-center transition-all cursor-pointer',
         isDragging
-          ? 'border-primary bg-primary/5 dark:bg-primary/10'
-          : 'border-zinc-300 dark:border-zinc-700 hover:border-primary/50 hover:bg-zinc-50 dark:hover:bg-zinc-800/40',
+          ? 'border-primary bg-primary/5'
+          : 'border-border hover:border-primary/40 hover:bg-muted/30',
         disabled && 'opacity-60 cursor-not-allowed',
       )}
     >
@@ -133,28 +133,20 @@ function DropZone({ onFiles, disabled }: DropZoneProps) {
       />
 
       <div className="flex flex-col items-center gap-3 pointer-events-none">
-        <div
-          className={cn(
-            'w-16 h-16 rounded-2xl flex items-center justify-center transition-colors',
-            isDragging
-              ? 'bg-primary/10 text-primary'
-              : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500',
-          )}
-        >
+        <div className={cn('w-16 h-16 rounded-2xl flex items-center justify-center transition-colors', isDragging ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground')}>
           <Upload className="w-8 h-8" />
         </div>
 
         <div>
-          <p className="font-semibold text-zinc-700 dark:text-zinc-300">
+          <p className="font-semibold text-foreground">
             {isDragging ? 'Drop files here' : 'Drag & drop files here'}
           </p>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            or{' '}
-            <span className="text-primary font-medium underline underline-offset-2">browse</span>
+          <p className="mt-1 text-sm text-muted-foreground">
+            or <span className="text-primary font-medium underline underline-offset-2">browse</span>
           </p>
         </div>
 
-        <p className="text-xs text-zinc-400 dark:text-zinc-500">
+        <p className="text-xs text-muted-foreground/70">
           Supported formats: PDF, DOCX &middot; Max size: 50 MB per file
         </p>
       </div>
@@ -176,30 +168,23 @@ function FileRow({ entry, onRemove, onView }: FileRowProps) {
       className={cn(
         'flex items-center gap-3 p-3 rounded-xl border transition-colors',
         entry.status === 'error'
-          ? 'border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20'
+          ? 'border-destructive/30 bg-destructive/5'
           : entry.status === 'success'
           ? 'border-emerald-200 dark:border-emerald-900 bg-emerald-50/50 dark:bg-emerald-950/20'
-          : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900',
+          : 'border-border bg-card',
       )}
     >
       <FileIcon file={entry.file} />
 
       {/* Name + size */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50 truncate">
-          {entry.file.name}
-        </p>
-        <p className="text-xs text-zinc-400 dark:text-zinc-500">
-          {formatFileSize(entry.file.size)}
-        </p>
+        <p className="text-sm font-medium text-foreground truncate">{entry.file.name}</p>
+        <p className="text-xs text-muted-foreground">{formatFileSize(entry.file.size)}</p>
 
         {/* Progress bar */}
         {entry.status === 'uploading' && (
-          <div className="mt-2 h-1 w-full rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
-            <div
-              className="h-full bg-primary rounded-full transition-all duration-300"
-              style={{ width: `${entry.progress}%` }}
-            />
+          <div className="mt-2 h-1 w-full rounded-full bg-muted overflow-hidden">
+            <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${entry.progress}%` }} />
           </div>
         )}
 
@@ -390,7 +375,7 @@ export default function UploadPage() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link href="/documents">
-          <button className="flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+          <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="w-4 h-4" />
             Back to Documents
           </button>
@@ -398,25 +383,23 @@ export default function UploadPage() {
       </div>
 
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Upload Documents
-        </h1>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Upload Documents</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Upload PDF or DOCX files for AI analysis and contract review.
         </p>
       </div>
 
       {/* All-done success state */}
       {allDone ? (
-        <div className="bg-white dark:bg-zinc-900 border border-emerald-200 dark:border-emerald-900 rounded-2xl p-8 text-center space-y-4">
+        <div className="bg-card border border-emerald-200 dark:border-emerald-900 rounded-2xl p-8 text-center space-y-4">
           <div className="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center mx-auto">
             <CheckCircle2 className="w-9 h-9 text-emerald-500" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
+            <h2 className="text-lg font-semibold text-foreground">
               {successCount} file{successCount !== 1 ? 's' : ''} uploaded
             </h2>
-            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="mt-1 text-sm text-muted-foreground">
               Your documents are queued for AI parsing. This may take a moment.
             </p>
           </div>
@@ -444,13 +427,13 @@ export default function UploadPage() {
       ) : (
         <>
           {/* Drop zone */}
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 space-y-5">
+          <div className="bg-card border border-border rounded-2xl p-6 space-y-5">
             <DropZone onFiles={addFiles} disabled={isUploading} />
 
             {/* File list */}
             {entries.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Files ({entries.length})
                 </p>
                 <div className="space-y-2">
@@ -468,12 +451,10 @@ export default function UploadPage() {
           </div>
 
           {/* Matter selector */}
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 space-y-3">
+          <div className="bg-card border border-border rounded-2xl p-6 space-y-3">
             <div>
-              <label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-                Associate with Matter
-              </label>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+              <label className="text-sm font-semibold text-foreground">Associate with Matter</label>
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Optionally link these documents to an active matter.
               </p>
             </div>
