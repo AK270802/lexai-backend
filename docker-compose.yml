@@ -50,6 +50,11 @@ services:
       - "6334:6334"
     volumes:
       - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:6333/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - lexai-network
 
@@ -71,8 +76,9 @@ services:
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - ./backend:/app
+      - hf_cache:/root/.cache/huggingface
     environment:
-      - DJANGO_SECRET_KEY=django-insecure-super-secret-key-change-me  
+      - DJANGO_SECRET_KEY=django-insecure-super-secret-key-change-me
       - DATABASE_URL=postgres://${POSTGRES_USER:-lexai}:${POSTGRES_PASSWORD:-lexai}@db:5432/${POSTGRES_DB:-lexai}
       - POSTGRES_DB=${POSTGRES_DB:-lexai}
       - POSTGRES_USER=${POSTGRES_USER:-lexai}
@@ -83,17 +89,24 @@ services:
       - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-lexai}
       - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-lexai_secret}
       - QDRANT_HOST=http://qdrant:6333
-      - DEFAULT_LLM_PROVIDER=openrouter
-      - OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
-      - OPENROUTER_API_KEY=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
+      - DEFAULT_LLM_PROVIDER=ollama
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - EMBED_DIMENSIONS=384
       - FRONTEND_URL=http://localhost:3000
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+      qdrant:
+        condition: service_healthy
     ports:
       - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/api/health/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
     networks:
       - lexai-network
 
@@ -102,11 +115,12 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: lexai-worker
-    command: celery -A config worker --loglevel=info
+    command: celery -A config worker --loglevel=info --concurrency=2
     volumes:
       - ./backend:/app
+      - hf_cache:/root/.cache/huggingface
     environment:
-      - DJANGO_SECRET_KEY=django-insecure-super-secret-key-change-me  
+      - DJANGO_SECRET_KEY=django-insecure-super-secret-key-change-me
       - DATABASE_URL=postgres://${POSTGRES_USER:-lexai}:${POSTGRES_PASSWORD:-lexai}@db:5432/${POSTGRES_DB:-lexai}
       - POSTGRES_DB=${POSTGRES_DB:-lexai}
       - POSTGRES_USER=${POSTGRES_USER:-lexai}
@@ -117,9 +131,9 @@ services:
       - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-lexai}
       - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-lexai_secret}
       - QDRANT_HOST=http://qdrant:6333
-      - DEFAULT_LLM_PROVIDER=openrouter
-      - OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
-      - OPENROUTER_API_KEY=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
+      - DEFAULT_LLM_PROVIDER=ollama
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - EMBED_DIMENSIONS=384
       - FRONTEND_URL=http://localhost:3000
     deploy:
       resources:
@@ -128,8 +142,12 @@ services:
         reservations:
           memory: 4G
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
     networks:
       - lexai-network
 
@@ -156,3 +174,4 @@ volumes:
   postgres_data:
   minio_data:
   qdrant_data:
+  hf_cache:

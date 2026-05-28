@@ -560,8 +560,8 @@ export default function ContractReviewPage() {
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
-  const fetchAll = useCallback(async () => {
-    setIsLoading(true);
+  const fetchAll = useCallback(async (silent = false) => {
+    if (!silent) setIsLoading(true);
     setError(null);
     try {
       const [contractData, clausesData] = await Promise.all([
@@ -571,7 +571,7 @@ export default function ContractReviewPage() {
       setContract(contractData);
       setClauses(clausesData);
       // Select highest-risk clause by default
-      if (clausesData.length > 0) {
+      if (clausesData.length > 0 && !selectedClauseId) {
         const sorted = [...clausesData].sort(
           (a, b) => RISK_WEIGHTS[b.risk_level] - RISK_WEIGHTS[a.risk_level],
         );
@@ -580,13 +580,21 @@ export default function ContractReviewPage() {
     } catch (err) {
       setError(parseErrorMessage(err));
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
-  }, [id]);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
+
+  // Poll every 5 s while the document is still being processed
+  useEffect(() => {
+    if (!contract) return;
+    if (contract.parse_status !== 'processing' && contract.parse_status !== 'pending') return;
+    const timer = setInterval(() => fetchAll(true), 5000);
+    return () => clearInterval(timer);
+  }, [contract?.parse_status, fetchAll]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Filtered clauses ───────────────────────────────────────────────────────
 

@@ -27,10 +27,10 @@ numpy
 pandas
 pytest
 pytest-django
-# GPU support (install with: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121)
+# Local embeddings (CPU-friendly; no GPU required)
+sentence-transformers>=2.6.0
+# PyTorch CPU build — swap for CUDA build if GPU available
 torch
 torchvision
 torchaudio
-
-
 requests
