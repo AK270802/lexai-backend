@@ -18,6 +18,7 @@ import type { ClauseVaultEntry } from '@/lib/types';
 import { useAuth } from '@/stores/use-auth';
 import { cn, formatDate, parseErrorMessage, statusBadgeClass } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -283,6 +284,7 @@ function DeleteConfirm({ clause, onConfirm, onCancel, deleting }: DeleteConfirmP
 
 export default function VaultPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const canEdit = user?.role === 'admin' || user?.role === 'lawyer';
 
   const [clauses, setClauses] = useState<ClauseVaultEntry[]>([]);
@@ -354,8 +356,10 @@ export default function VaultPage() {
     try {
       if (editTarget) {
         await vaultApi.update(editTarget.id, form);
+        toast({ variant: 'success', title: 'Clause updated', description: form.label });
       } else {
         await vaultApi.create(form);
+        toast({ variant: 'success', title: 'Clause added', description: form.label });
       }
       closeForm();
       fetchClauses();
@@ -370,11 +374,14 @@ export default function VaultPage() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
+      const label = deleteTarget.label;
       await vaultApi.delete(deleteTarget.id);
       setDeleteTarget(null);
+      toast({ variant: 'success', title: 'Clause deleted', description: label });
       fetchClauses();
     } catch (e) {
       setError(parseErrorMessage(e));
+      toast({ variant: 'error', title: 'Delete failed', description: parseErrorMessage(e) });
     } finally {
       setDeleting(false);
     }

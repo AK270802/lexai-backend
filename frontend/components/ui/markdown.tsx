@@ -42,6 +42,58 @@ function renderInline(text: string): string {
   return s;
 }
 
+function getIndent(line: string): number {
+  return line.match(/^(\s*)/)?.[1].length ?? 0;
+}
+
+function isListItem(line: string): boolean {
+  return /^(\s*)[\-\*\+]\s+/.test(line) || /^(\s*)\d+\.\s+/.test(line);
+}
+
+function isOrdered(line: string): boolean {
+  return /^(\s*)\d+\.\s+/.test(line);
+}
+
+function renderList(lines: string[], baseIndent: number): { html: string; consumed: number } {
+  if (lines.length === 0) return { html: '', consumed: 0 };
+
+  const firstLine = lines[0];
+  const tag = isOrdered(firstLine) ? 'ol' : 'ul';
+  const cls = tag === 'ol' ? 'md-ol' : 'md-ul';
+
+  let html = `<${tag} class="${cls}">`;
+  let idx = 0;
+
+  while (idx < lines.length) {
+    const line = lines[idx];
+    if (!isListItem(line)) { idx++; continue; }
+
+    const indent = getIndent(line);
+    if (indent < baseIndent) break;
+    if (indent > baseIndent) { idx++; continue; } // handled by sub-list recursion
+
+    const itemText = line.replace(/^\s*[\-\*\+]\s+/, '').replace(/^\s*\d+\.\s+/, '');
+    idx++;
+
+    // Collect sub-items at deeper indentation
+    const subLines: string[] = [];
+    while (idx < lines.length) {
+      const next = lines[idx];
+      if (!isListItem(next)) { idx++; break; }
+      const nextIndent = getIndent(next);
+      if (nextIndent <= indent) break;
+      subLines.push(next);
+      idx++;
+    }
+
+    const subHtml = subLines.length > 0 ? renderList(subLines, indent + 2).html : '';
+    html += `<li class="md-li">${renderInline(escapeHtml(itemText))}${subHtml}</li>`;
+  }
+
+  html += `</${tag}>`;
+  return { html, consumed: idx };
+}
+
 function parseMarkdown(md: string): string {
   const lines = md.split('\n');
   const output: string[] = [];
@@ -127,25 +179,23 @@ function parseMarkdown(md: string): string {
       }
     }
 
-    // Unordered list
-    if (/^[\-\*\+]\s+/.test(line)) {
-      const listItems: string[] = [];
-      while (i < lines.length && /^[\-\*\+]\s+/.test(lines[i])) {
-        listItems.push(`<li class="md-li">${renderInline(escapeHtml(lines[i].replace(/^[\-\*\+]\s+/, '')))}</li>`);
-        i++;
+    // List (unordered or ordered) — supports nesting via indentation
+    if (/^(\s*)[\-\*\+]\s+/.test(line) || /^(\s*)\d+\.\s+/.test(line)) {
+      // Collect all consecutive list-ish lines (including indented sub-items and blank lines within lists)
+      const listLines: string[] = [];
+      while (i < lines.length) {
+        const l = lines[i];
+        if (/^(\s*)[\-\*\+]\s+/.test(l) || /^(\s*)\d+\.\s+/.test(l)) {
+          listLines.push(l);
+          i++;
+        } else if (l.trim() === '' && i + 1 < lines.length &&
+          (/^(\s*)[\-\*\+]\s+/.test(lines[i + 1]) || /^(\s*)\d+\.\s+/.test(lines[i + 1]))) {
+          i++; // skip blank line between list groups
+        } else {
+          break;
+        }
       }
-      output.push(`<ul class="md-ul">${listItems.join('')}</ul>`);
-      continue;
-    }
-
-    // Ordered list
-    if (/^\d+\.\s+/.test(line)) {
-      const listItems: string[] = [];
-      while (i < lines.length && /^\d+\.\s+/.test(lines[i])) {
-        listItems.push(`<li class="md-li">${renderInline(escapeHtml(lines[i].replace(/^\d+\.\s+/, '')))}</li>`);
-        i++;
-      }
-      output.push(`<ol class="md-ol">${listItems.join('')}</ol>`);
+      output.push(renderList(listLines, 0).html);
       continue;
     }
 

@@ -22,10 +22,12 @@ import {
   X,
   BarChart2,
   Info,
+  ListX,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { contractsApi } from '@/lib/api/contracts';
+import { useToast } from '@/components/ui/toast';
 import { cn, formatDate, riskBadgeClass, statusBadgeClass, parseErrorMessage } from '@/lib/utils';
 import type { ContractClause, Document, Redline, RiskLevel } from '@/lib/types';
 import { Markdown } from '@/components/ui/markdown';
@@ -172,6 +174,7 @@ interface RedlineSectionProps {
   redlines: Redline[];
   onRedlineCreated: (r: Redline) => void;
   onRedlineUpdated: (r: Redline) => void;
+  onToast: (opts: { variant: 'success' | 'error'; title: string; description?: string }) => void;
 }
 
 function RedlineSection({
@@ -180,6 +183,7 @@ function RedlineSection({
   redlines,
   onRedlineCreated,
   onRedlineUpdated,
+  onToast,
 }: RedlineSectionProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [revisedText, setRevisedText] = useState('');
@@ -202,6 +206,7 @@ function RedlineSection({
         revised_text: revisedText,
       });
       onRedlineCreated(r);
+      onToast({ variant: 'success', title: 'Redline created' });
       setIsCreating(false);
       setRevisedText('');
     } catch (err) {
@@ -217,8 +222,10 @@ function RedlineSection({
     try {
       const r = await contractsApi.acceptRedline(contractId, redlineId);
       onRedlineUpdated(r);
+      onToast({ variant: 'success', title: 'Redline accepted' });
     } catch (err) {
       setActionError(parseErrorMessage(err));
+      onToast({ variant: 'error', title: 'Action failed', description: parseErrorMessage(err) });
     } finally {
       setActionLoading(null);
     }
@@ -230,8 +237,10 @@ function RedlineSection({
     try {
       const r = await contractsApi.rejectRedline(contractId, redlineId);
       onRedlineUpdated(r);
+      onToast({ variant: 'success', title: 'Redline rejected' });
     } catch (err) {
       setActionError(parseErrorMessage(err));
+      onToast({ variant: 'error', title: 'Action failed', description: parseErrorMessage(err) });
     } finally {
       setActionLoading(null);
     }
@@ -421,6 +430,7 @@ interface ClauseDetailProps {
   contractId: string;
   onRedlineCreated: (r: Redline) => void;
   onRedlineUpdated: (r: Redline) => void;
+  onToast: (opts: { variant: 'success' | 'error'; title: string; description?: string }) => void;
 }
 
 function ClauseDetail({
@@ -429,6 +439,7 @@ function ClauseDetail({
   contractId,
   onRedlineCreated,
   onRedlineUpdated,
+  onToast,
 }: ClauseDetailProps) {
   return (
     <div className="h-full overflow-y-auto scrollbar-thin p-6 space-y-6">
@@ -523,6 +534,7 @@ function ClauseDetail({
         redlines={redlines}
         onRedlineCreated={onRedlineCreated}
         onRedlineUpdated={onRedlineUpdated}
+        onToast={onToast}
       />
     </div>
   );
@@ -549,6 +561,7 @@ function EmptyClauseDetail() {
 export default function ContractReviewPage() {
   const params = useParams();
   const id = params.id as string;
+  const { toast } = useToast();
 
   const [contract, setContract] = useState<(Document & { download_url?: string }) | null>(null);
   const [clauses, setClauses] = useState<ContractClause[]>([]);
@@ -558,6 +571,10 @@ export default function ContractReviewPage() {
 
   const [selectedClauseId, setSelectedClauseId] = useState<string | null>(null);
   const [riskFilter, setRiskFilter] = useState<RiskLevel | 'all'>('all');
+
+  const [missingClauses, setMissingClauses] = useState<string[]>([]);
+  const [missingDocType, setMissingDocType] = useState('');
+  const [missingLoading, setMissingLoading] = useState(false);
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
@@ -596,6 +613,19 @@ export default function ContractReviewPage() {
     const timer = setInterval(() => fetchAll(true), 5000);
     return () => clearInterval(timer);
   }, [contract?.parse_status, fetchAll]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch missing clauses once document is complete
+  useEffect(() => {
+    if (!contract || contract.parse_status !== 'completed') return;
+    setMissingLoading(true);
+    contractsApi.getMissingClauses(id)
+      .then((data) => {
+        setMissingClauses(data.missing ?? []);
+        setMissingDocType(data.document_type ?? '');
+      })
+      .catch(() => {})
+      .finally(() => setMissingLoading(false));
+  }, [id, contract?.parse_status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Filtered clauses ───────────────────────────────────────────────────────
 
@@ -673,7 +703,7 @@ export default function ContractReviewPage() {
               Back to Documents
             </Button>
           </Link>
-          <Button onClick={fetchAll} className="flex items-center gap-1.5">
+          <Button onClick={() => fetchAll()} className="flex items-center gap-1.5">
             <Loader2 className="w-4 h-4" />
             Retry
           </Button>
@@ -804,6 +834,36 @@ export default function ContractReviewPage() {
             </div>
           </div>
 
+          {/* Missing clauses */}
+          {(missingLoading || missingClauses.length > 0) && (
+            <div className="px-4 pt-3 pb-3 border-b border-border space-y-2">
+              <div className="flex items-center gap-1.5">
+                <ListX className="w-3.5 h-3.5 text-amber-500" />
+                <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Missing Clauses
+                </span>
+                {missingDocType && (
+                  <span className="ml-auto text-[10px] text-muted-foreground/50">{missingDocType}</span>
+                )}
+              </div>
+              {missingLoading ? (
+                <div className="space-y-1.5">
+                  <Skeleton className="h-3 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              ) : (
+                <ul className="space-y-1">
+                  {missingClauses.map((c) => (
+                    <li key={c} className="flex items-center gap-1.5 text-[11px] text-amber-600 dark:text-amber-400">
+                      <div className="w-1 h-1 rounded-full bg-amber-500 shrink-0" />
+                      {c}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
           {/* Risk filter */}
           <div className="px-2 pt-2 pb-1 border-b border-border">
             <div className="flex flex-wrap gap-1">
@@ -916,6 +976,7 @@ export default function ContractReviewPage() {
               contractId={id}
               onRedlineCreated={handleRedlineCreated}
               onRedlineUpdated={handleRedlineUpdated}
+              onToast={toast}
             />
           ) : (
             <EmptyClauseDetail />
