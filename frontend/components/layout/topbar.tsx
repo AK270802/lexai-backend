@@ -8,7 +8,7 @@ import { useNotifications } from '@/stores/use-notifications';
 import { useUI } from '@/stores/use-ui';
 import {
   Bell, Search, Sun, Moon, Monitor,
-  ChevronDown, Check, X,
+  ChevronDown, Check, X, Command,
 } from 'lucide-react';
 
 const PAGE_TITLES: Record<string, string> = {
@@ -162,6 +162,7 @@ export function Topbar() {
   const pathname = usePathname();
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
+  const { openCommandPalette } = useUI();
   const [notifOpen, setNotifOpen] = useState(false);
 
   const title = Object.entries(PAGE_TITLES).find(([path]) =>
@@ -183,6 +184,26 @@ export function Topbar() {
 
       {/* Right: actions */}
       <div className="flex items-center gap-1">
+        {/* Command palette trigger */}
+        <button
+          onClick={openCommandPalette}
+          className="hidden md:flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors border border-transparent hover:border-border"
+          title="Open command palette"
+        >
+          <Search className="w-3.5 h-3.5" />
+          <span className="text-xs">Search…</span>
+          <kbd className="flex items-center gap-0.5 ml-1 px-1 py-0.5 text-[10px] font-medium rounded bg-muted border border-border">
+            <Command className="w-2.5 h-2.5" />K
+          </kbd>
+        </button>
+        <button
+          onClick={openCommandPalette}
+          className="flex md:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          title="Search"
+        >
+          <Search className="w-4 h-4" />
+        </button>
+
         <ThemeToggle />
 
         {/* Notifications */}

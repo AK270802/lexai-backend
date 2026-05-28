@@ -28,6 +28,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { contractsApi } from '@/lib/api/contracts';
 import { cn, formatDate, riskBadgeClass, statusBadgeClass, parseErrorMessage } from '@/lib/utils';
 import type { ContractClause, Document, Redline, RiskLevel } from '@/lib/types';
+import { Markdown } from '@/components/ui/markdown';
 
 // ─── Risk helpers ─────────────────────────────────────────────────────────────
 
@@ -506,9 +507,9 @@ function ClauseDetail({
             <Sparkles className="w-3.5 h-3.5" />
             AI Suggested Revision
           </p>
-          <p className="text-sm text-zinc-800 dark:text-zinc-200 leading-relaxed whitespace-pre-wrap">
-            {clause.suggested_revision}
-          </p>
+          <div className="ai-prose text-sm">
+            <Markdown content={clause.suggested_revision} />
+          </div>
         </div>
       )}
 
