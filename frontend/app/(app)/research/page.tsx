@@ -7,6 +7,7 @@ import type { Matter } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Markdown } from '@/components/ui/markdown';
 import { cn, truncate, formatRelative, parseErrorMessage } from '@/lib/utils';
 import {
   Search,
@@ -512,16 +513,16 @@ export default function ResearchPage() {
 
                   {/* Response body */}
                   <div className="rounded-xl border border-border bg-card p-6">
-                    <div
-                      className={cn(
-                        'ai-prose text-foreground/90 whitespace-pre-wrap',
-                        isStreaming && 'token-cursor'
-                      )}
-                    >
-                      {currentResponse || (
-                        <span className="text-muted-foreground/60 italic">Generating response…</span>
-                      )}
-                    </div>
+                    {currentResponse ? (
+                      <Markdown content={currentResponse} streaming={isStreaming} />
+                    ) : (
+                      <div className="flex items-center gap-2.5 text-muted-foreground/60">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                        <div className="w-1 h-1 rounded-full bg-primary/60 animate-pulse" style={{ animationDelay: '0.15s' }} />
+                        <div className="w-1 h-1 rounded-full bg-primary/40 animate-pulse" style={{ animationDelay: '0.3s' }} />
+                        <span className="text-xs italic ml-1">Generating legal analysis…</span>
+                      </div>
+                    )}
                     <div ref={responseEndRef} />
                   </div>
                 </div>
