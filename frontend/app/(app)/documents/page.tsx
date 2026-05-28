@@ -231,7 +231,7 @@ export default function DocumentsPage() {
       {/* Search + bulk actions */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           <Input
             placeholder="Search documents..."
             className="pl-10"
@@ -242,7 +242,7 @@ export default function DocumentsPage() {
 
         {selected.size > 0 && (
           <div className="flex items-center gap-2">
-            <span className="text-sm text-zinc-500 dark:text-zinc-400">
+            <span className="text-sm text-muted-foreground">
               {selected.size} selected
             </span>
             <Button

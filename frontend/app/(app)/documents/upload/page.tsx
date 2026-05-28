@@ -218,7 +218,7 @@ function FileRow({ entry, onRemove, onView }: FileRowProps) {
         {(entry.status === 'pending' || entry.status === 'error') && (
           <button
             onClick={() => onRemove(entry.id)}
-            className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
+            className="text-muted-foreground hover:text-foreground transition-colors"
             aria-label="Remove file"
           >
             <X className="w-4 h-4" />
@@ -258,7 +258,7 @@ function MatterSelect({ value, onChange, matters, isLoading }: MatterSelectProps
           </option>
         ))}
       </select>
-      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
     </div>
   );
 }

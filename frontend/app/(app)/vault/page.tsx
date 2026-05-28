@@ -43,7 +43,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   liability: 'bg-orange-50 text-orange-700 dark:bg-orange-950/60 dark:text-orange-400',
   payment: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400',
   ip: 'bg-violet-50 text-violet-700 dark:bg-violet-950/60 dark:text-violet-400',
-  general: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',
+  general: 'bg-muted text-foreground/70',
 };
 
 function categoryBadge(cat: string) {

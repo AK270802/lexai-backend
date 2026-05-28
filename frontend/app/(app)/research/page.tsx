@@ -42,7 +42,7 @@ const EXAMPLE_PROMPTS = [
 function RelevanceBar({ score }: { score: number }) {
   const pct = Math.round(score * 100);
   const color =
-    pct >= 80 ? 'bg-emerald-500' : pct >= 60 ? 'bg-amber-500' : 'bg-zinc-400';
+    pct >= 80 ? 'bg-emerald-500' : pct >= 60 ? 'bg-amber-500' : 'bg-muted-foreground/40';
   return (
     <div className="flex items-center gap-1.5">
       <div className="h-1 w-16 rounded-full bg-border overflow-hidden">
