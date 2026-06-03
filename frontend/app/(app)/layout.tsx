@@ -4,14 +4,29 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/stores/use-auth';
 import { useNotifications } from '@/stores/use-notifications';
+import { useUI } from '@/stores/use-ui';
 import { authApi } from '@/lib/api/auth';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Topbar } from '@/components/layout/topbar';
+import { CommandPalette } from '@/components/ui/command-palette';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, setAuth, setLoading, logout } = useAuth();
   const { fetch: fetchNotifications, connect } = useNotifications();
+  const { openCommandPalette } = useUI();
   const router = useRouter();
+
+  // Global ⌘K / Ctrl+K shortcut
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        openCommandPalette();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [openCommandPalette]);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -54,6 +69,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+      <CommandPalette />
     </div>
   );
 }

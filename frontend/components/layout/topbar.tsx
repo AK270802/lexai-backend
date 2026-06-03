@@ -8,7 +8,7 @@ import { useNotifications } from '@/stores/use-notifications';
 import { useUI } from '@/stores/use-ui';
 import {
   Bell, Search, Sun, Moon, Monitor,
-  ChevronDown, Check, X,
+  ChevronDown, Check, X, Command,
 } from 'lucide-react';
 
 const PAGE_TITLES: Record<string, string> = {
@@ -158,31 +158,78 @@ function ThemeToggle() {
   );
 }
 
+function Breadcrumbs({ pathname }: { pathname: string }) {
+  const segments = pathname.split('/').filter(Boolean);
+
+  // Build breadcrumb items: find first matching base path, then any sub-segments
+  const base = Object.entries(PAGE_TITLES).find(([path]) =>
+    pathname === path || pathname.startsWith(path + '/')
+  );
+
+  if (!base) return <h1 className="text-sm font-semibold text-foreground">LexAI</h1>;
+
+  const [basePath, baseLabel] = base;
+  const isNested = pathname !== basePath;
+
+  const subLabel = (() => {
+    if (pathname.startsWith('/matters/new')) return 'New Matter';
+    if (pathname.startsWith('/matters/') && segments.length >= 2) return 'Matter Detail';
+    if (pathname.startsWith('/contracts/')) return 'Contract Review';
+    if (pathname.startsWith('/documents/upload')) return 'Upload';
+    return null;
+  })();
+
+  return (
+    <div className="flex items-center gap-1.5 text-sm">
+      <h1 className={cn('font-semibold', isNested ? 'text-muted-foreground' : 'text-foreground')}>
+        {baseLabel}
+      </h1>
+      {isNested && subLabel && (
+        <>
+          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground/50 rotate-[-90deg]" />
+          <span className="font-semibold text-foreground">{subLabel}</span>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function Topbar() {
   const pathname = usePathname();
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
+  const { openCommandPalette } = useUI();
   const [notifOpen, setNotifOpen] = useState(false);
-
-  const title = Object.entries(PAGE_TITLES).find(([path]) =>
-    pathname === path || pathname.startsWith(path + '/')
-  )?.[1] ?? 'LexAI';
 
   return (
     <header className="h-[56px] flex items-center justify-between px-6 border-b border-border bg-background/95 backdrop-blur-sm shrink-0 z-40">
-      {/* Left: page title */}
+      {/* Left: breadcrumbs */}
       <div className="flex items-center gap-3">
-        <h1 className="text-sm font-semibold text-foreground">{title}</h1>
-        {pathname.includes('/matters/') && (
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <span className="text-xs">/</span>
-            <span className="text-xs">Matter Detail</span>
-          </div>
-        )}
+        <Breadcrumbs pathname={pathname} />
       </div>
 
       {/* Right: actions */}
       <div className="flex items-center gap-1">
+        {/* Command palette trigger */}
+        <button
+          onClick={openCommandPalette}
+          className="hidden md:flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors border border-transparent hover:border-border"
+          title="Open command palette"
+        >
+          <Search className="w-3.5 h-3.5" />
+          <span className="text-xs">Search…</span>
+          <kbd className="flex items-center gap-0.5 ml-1 px-1 py-0.5 text-[10px] font-medium rounded bg-muted border border-border">
+            <Command className="w-2.5 h-2.5" />K
+          </kbd>
+        </button>
+        <button
+          onClick={openCommandPalette}
+          className="flex md:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          title="Search"
+        >
+          <Search className="w-4 h-4" />
+        </button>
+
         <ThemeToggle />
 
         {/* Notifications */}

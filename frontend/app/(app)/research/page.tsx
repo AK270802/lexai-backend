@@ -7,6 +7,8 @@ import type { Matter } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Markdown } from '@/components/ui/markdown';
+import { useToast } from '@/components/ui/toast';
 import { cn, truncate, formatRelative, parseErrorMessage } from '@/lib/utils';
 import {
   Search,
@@ -41,7 +43,7 @@ const EXAMPLE_PROMPTS = [
 function RelevanceBar({ score }: { score: number }) {
   const pct = Math.round(score * 100);
   const color =
-    pct >= 80 ? 'bg-emerald-500' : pct >= 60 ? 'bg-amber-500' : 'bg-zinc-400';
+    pct >= 80 ? 'bg-emerald-500' : pct >= 60 ? 'bg-amber-500' : 'bg-muted-foreground/40';
   return (
     <div className="flex items-center gap-1.5">
       <div className="h-1 w-16 rounded-full bg-border overflow-hidden">
@@ -63,6 +65,63 @@ function HistorySkeleton() {
           <Skeleton className="h-2.5 w-24" />
         </div>
       ))}
+    </div>
+  );
+}
+
+// ─── Progress steps for streaming ────────────────────────────────────────────
+
+const RESEARCH_STEPS = [
+  { id: 'analyze', label: 'Analyzing query', keywords: ['analyz', 'understanding', 'processing'] },
+  { id: 'retrieve', label: 'Searching documents', keywords: ['search', 'retriev', 'scanning', 'finding'] },
+  { id: 'generate', label: 'Generating response', keywords: ['generat', 'synthesiz', 'drafting', 'writing', 'token'] },
+];
+
+function ResearchProgressSteps({ statusMessage }: { statusMessage: string }) {
+  const lower = statusMessage.toLowerCase();
+  const activeIdx = RESEARCH_STEPS.findIndex((s) => s.keywords.some((k) => lower.includes(k)));
+  const current = activeIdx >= 0 ? activeIdx : 0;
+
+  return (
+    <div className="flex items-center gap-0 px-1">
+      {RESEARCH_STEPS.map((step, idx) => {
+        const done = idx < current;
+        const active = idx === current;
+        return (
+          <div key={step.id} className="flex items-center gap-0 flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <div
+                className={cn(
+                  'w-5 h-5 rounded-full flex items-center justify-center flex-none text-[9px] font-bold transition-all',
+                  done
+                    ? 'bg-primary text-primary-foreground'
+                    : active
+                    ? 'bg-primary/20 text-primary border border-primary/40'
+                    : 'bg-muted text-muted-foreground/40'
+                )}
+              >
+                {done ? <Check className="w-2.5 h-2.5" /> : idx + 1}
+              </div>
+              <span
+                className={cn(
+                  'text-[10px] font-medium truncate transition-colors',
+                  done ? 'text-primary' : active ? 'text-primary/80' : 'text-muted-foreground/40'
+                )}
+              >
+                {step.label}
+              </span>
+            </div>
+            {idx < RESEARCH_STEPS.length - 1 && (
+              <div
+                className={cn(
+                  'flex-1 h-px mx-2 transition-colors',
+                  done ? 'bg-primary/40' : 'bg-border'
+                )}
+              />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -90,6 +149,7 @@ export default function ResearchPage() {
   const [matters, setMatters] = useState<Matter[]>([]);
   const [mattersLoading, setMattersLoading] = useState(true);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const { toast } = useToast();
   const [copied, setCopied] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -153,6 +213,7 @@ export default function ResearchPage() {
     if (!currentResponse) return;
     await navigator.clipboard.writeText(currentResponse).catch(() => {});
     setCopied(true);
+    toast({ variant: 'success', title: 'Copied to clipboard' });
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -405,11 +466,14 @@ export default function ResearchPage() {
                 </div>
               )}
 
-              {/* Status indicator */}
+              {/* Status indicator with progress steps */}
               {statusMessage && !showError && (
-                <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-primary/8 border border-primary/20 text-primary text-xs font-medium">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin flex-none" />
-                  <span>{statusMessage}</span>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-primary/8 border border-primary/20 text-primary text-xs font-medium">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin flex-none" />
+                    <span>{statusMessage}</span>
+                  </div>
+                  <ResearchProgressSteps statusMessage={statusMessage} />
                 </div>
               )}
 
@@ -512,16 +576,16 @@ export default function ResearchPage() {
 
                   {/* Response body */}
                   <div className="rounded-xl border border-border bg-card p-6">
-                    <div
-                      className={cn(
-                        'ai-prose text-foreground/90 whitespace-pre-wrap',
-                        isStreaming && 'token-cursor'
-                      )}
-                    >
-                      {currentResponse || (
-                        <span className="text-muted-foreground/60 italic">Generating response…</span>
-                      )}
-                    </div>
+                    {currentResponse ? (
+                      <Markdown content={currentResponse} streaming={isStreaming} />
+                    ) : (
+                      <div className="flex items-center gap-2.5 text-muted-foreground/60">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                        <div className="w-1 h-1 rounded-full bg-primary/60 animate-pulse" style={{ animationDelay: '0.15s' }} />
+                        <div className="w-1 h-1 rounded-full bg-primary/40 animate-pulse" style={{ animationDelay: '0.3s' }} />
+                        <span className="text-xs italic ml-1">Generating legal analysis…</span>
+                      </div>
+                    )}
                     <div ref={responseEndRef} />
                   </div>
                 </div>

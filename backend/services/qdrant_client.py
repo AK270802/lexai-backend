@@ -12,17 +12,25 @@ class QdrantClient:
         self.url = os.getenv("QDRANT_HOST", "http://localhost:6333")
         self.api_key = os.getenv("QDRANT_API_KEY")
         self.client = QClient(url=self.url, api_key=self.api_key)
-        self.vector_size = int(os.getenv("EMBED_DIMENSIONS", 768))
+        self.vector_size = int(os.getenv("EMBED_DIMENSIONS", 384))
 
     def ensure_collections(self):
-        """Create collections if they don't exist."""
+        """Create collections if they don't exist, recreate on dimension mismatch."""
         collections = ["document_chunks", "clause_library", "research_history"]
         for collection_name in collections:
             try:
-                self.client.get_collection(collection_name)
-                logger.info(f"Collection {collection_name} already exists.")
+                info = self.client.get_collection(collection_name)
+                existing_size = info.config.params.vectors.size
+                if existing_size != self.vector_size:
+                    logger.warning(
+                        f"Collection {collection_name} has dimension {existing_size}, "
+                        f"expected {self.vector_size}. Recreating..."
+                    )
+                    self.client.delete_collection(collection_name)
+                    raise Exception("dimension mismatch — recreate")
+                logger.info(f"Collection {collection_name} OK (dim={existing_size}).")
             except Exception:
-                logger.info(f"Creating collection {collection_name}...")
+                logger.info(f"Creating collection {collection_name} (dim={self.vector_size})...")
                 self.client.create_collection(
                     collection_name=collection_name,
                     vectors_config=VectorParams(size=self.vector_size, distance=Distance.COSINE),

@@ -79,28 +79,20 @@ function TableSkeleton() {
   return (
     <>
       {Array.from({ length: 6 }).map((_, i) => (
-        <tr key={i} className="border-b border-zinc-100 dark:border-zinc-800">
+        <tr key={i} className="border-b border-border">
           <td className="px-4 py-3">
             <div className="flex items-center gap-3">
-              <Skeleton className="w-10 h-10 rounded-lg bg-zinc-200 dark:bg-zinc-800" />
+              <Skeleton className="w-10 h-10 rounded-lg" />
               <div className="space-y-1.5">
-                <Skeleton className="h-4 w-48 bg-zinc-200 dark:bg-zinc-800" />
-                <Skeleton className="h-3 w-24 bg-zinc-200 dark:bg-zinc-800" />
+                <Skeleton className="h-4 w-48" />
+                <Skeleton className="h-3 w-24" />
               </div>
             </div>
           </td>
-          <td className="px-4 py-3">
-            <Skeleton className="h-5 w-12 rounded-full bg-zinc-200 dark:bg-zinc-800" />
-          </td>
-          <td className="px-4 py-3">
-            <Skeleton className="h-5 w-20 rounded-full bg-zinc-200 dark:bg-zinc-800" />
-          </td>
-          <td className="px-4 py-3">
-            <Skeleton className="h-4 w-28 bg-zinc-200 dark:bg-zinc-800" />
-          </td>
-          <td className="px-4 py-3">
-            <Skeleton className="h-4 w-20 bg-zinc-200 dark:bg-zinc-800" />
-          </td>
+          <td className="px-4 py-3"><Skeleton className="h-5 w-12 rounded-full" /></td>
+          <td className="px-4 py-3"><Skeleton className="h-5 w-20 rounded-full" /></td>
+          <td className="px-4 py-3"><Skeleton className="h-4 w-28" /></td>
+          <td className="px-4 py-3"><Skeleton className="h-4 w-20" /></td>
           <td className="px-4 py-3" />
         </tr>
       ))}
@@ -223,8 +215,8 @@ export default function DocumentsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Documents</h1>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Documents</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Manage and analyze your legal documents
           </p>
         </div>
@@ -239,7 +231,7 @@ export default function DocumentsPage() {
       {/* Search + bulk actions */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           <Input
             placeholder="Search documents..."
             className="pl-10"
@@ -250,7 +242,7 @@ export default function DocumentsPage() {
 
         {selected.size > 0 && (
           <div className="flex items-center gap-2">
-            <span className="text-sm text-zinc-500 dark:text-zinc-400">
+            <span className="text-sm text-muted-foreground">
               {selected.size} selected
             </span>
             <Button
@@ -281,18 +273,14 @@ export default function DocumentsPage() {
               'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors',
               statusFilter === f.value
                 ? 'bg-primary text-primary-foreground'
-                : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700',
+                : 'bg-muted text-muted-foreground hover:bg-accent hover:text-foreground',
             )}
           >
             {f.label}
-            <span
-              className={cn(
-                'inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full px-1 text-[10px] font-bold',
-                statusFilter === f.value
-                  ? 'bg-white/20 text-white'
-                  : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300',
-              )}
-            >
+            <span className={cn(
+              'inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full px-1 text-[10px] font-bold',
+              statusFilter === f.value ? 'bg-white/20 text-white' : 'bg-background text-muted-foreground',
+            )}>
               {statusCounts[f.value] ?? 0}
             </span>
           </button>
@@ -317,65 +305,50 @@ export default function DocumentsPage() {
       )}
 
       {/* Table */}
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden">
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
         <table className="w-full text-left">
           <thead>
-            <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
+            <tr className="border-b border-border bg-muted/50">
               <th className="w-10 px-4 py-3">
                 <input
                   type="checkbox"
                   checked={allSelected}
                   onChange={toggleAll}
                   disabled={isLoading || filtered.length === 0}
-                  className="rounded border-zinc-300 dark:border-zinc-600 cursor-pointer accent-primary"
+                  className="rounded border-input cursor-pointer accent-primary"
                   aria-label="Select all"
                 />
               </th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                Document
-              </th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                Type
-              </th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                Status
-              </th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                Matter
-              </th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                Uploaded
-              </th>
+              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Document</th>
+              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</th>
+              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
+              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Matter</th>
+              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Uploaded</th>
               <th className="px-4 py-3 w-8" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+          <tbody className="divide-y divide-border">
             {isLoading ? (
               <TableSkeleton />
             ) : filtered.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-4 py-20 text-center">
                   <div className="flex flex-col items-center gap-3">
-                    <FolderOpen className="w-12 h-12 text-zinc-300 dark:text-zinc-700" />
-                    <p className="font-semibold text-zinc-500 dark:text-zinc-400">
-                      {search || statusFilter !== 'all'
-                        ? 'No documents match your filters'
-                        : 'No documents yet'}
+                    <FolderOpen className="w-12 h-12 text-muted-foreground/30" />
+                    <p className="font-semibold text-muted-foreground">
+                      {search || statusFilter !== 'all' ? 'No documents match your filters' : 'No documents yet'}
                     </p>
                     {!search && statusFilter === 'all' && (
                       <Link href="/documents/upload">
-                        <Button size="sm" className="mt-1">
-                          <Upload className="w-3.5 h-3.5 mr-1.5" />
+                        <Button size="sm" className="mt-1 gap-1.5">
+                          <Upload className="w-3.5 h-3.5" />
                           Upload your first document
                         </Button>
                       </Link>
                     )}
                     {(search || statusFilter !== 'all') && (
                       <button
-                        onClick={() => {
-                          setSearch('');
-                          setStatusFilter('all');
-                        }}
+                        onClick={() => { setSearch(''); setStatusFilter('all'); }}
                         className="text-sm text-primary hover:underline"
                       >
                         Clear filters
@@ -390,87 +363,57 @@ export default function DocumentsPage() {
                   key={doc.id}
                   className={cn(
                     'group transition-colors cursor-pointer',
-                    selected.has(doc.id)
-                      ? 'bg-primary/5'
-                      : 'hover:bg-zinc-50/60 dark:hover:bg-zinc-800/40',
+                    selected.has(doc.id) ? 'bg-primary/5' : 'hover:bg-muted/40',
                   )}
                   onClick={() => handleRowClick(doc)}
                 >
-                  {/* Checkbox */}
-                  <td
-                    className="px-4 py-3"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleOne(doc.id);
-                    }}
-                  >
+                  <td className="px-4 py-3" onClick={(e) => { e.stopPropagation(); toggleOne(doc.id); }}>
                     <input
                       type="checkbox"
                       checked={selected.has(doc.id)}
                       onChange={() => toggleOne(doc.id)}
                       onClick={(e) => e.stopPropagation()}
-                      className="rounded border-zinc-300 dark:border-zinc-600 cursor-pointer accent-primary"
+                      className="rounded border-input cursor-pointer accent-primary"
                     />
                   </td>
 
-                  {/* Name + size */}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <FileIcon fileType={doc.file_type} />
                       <div className="min-w-0">
-                        <p className="font-medium text-sm text-zinc-900 dark:text-zinc-50 truncate max-w-xs">
-                          {doc.file_name}
-                        </p>
-                        <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                          {formatFileSize(doc.file_size)}
-                        </p>
+                        <p className="font-medium text-sm text-foreground truncate max-w-xs">{doc.file_name}</p>
+                        <p className="text-xs text-muted-foreground">{formatFileSize(doc.file_size)}</p>
                       </div>
                     </div>
                   </td>
 
-                  {/* File type */}
                   <td className="px-4 py-3">
-                    <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded">
+                    <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded">
                       {fileTypeLabel(doc.file_type)}
                     </span>
                   </td>
 
-                  {/* Parse status */}
                   <td className="px-4 py-3">
-                    <span
-                      className={cn(
-                        'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold capitalize',
-                        statusBadgeClass(doc.parse_status),
-                      )}
-                    >
+                    <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold capitalize', statusBadgeClass(doc.parse_status))}>
                       {parseStatusIcon(doc.parse_status)}
                       {doc.parse_status}
                     </span>
                   </td>
 
-                  {/* Matter */}
                   <td className="px-4 py-3">
                     {doc.matter_title ? (
-                      <Link
-                        href={`/matters/${doc.matter}`}
-                        className="text-xs text-primary hover:underline font-medium"
-                        onClick={(e) => e.stopPropagation()}
-                      >
+                      <Link href={`/matters/${doc.matter}`} className="text-xs text-primary hover:underline font-medium" onClick={(e) => e.stopPropagation()}>
                         {doc.matter_title}
                       </Link>
                     ) : (
-                      <span className="text-xs text-zinc-400 dark:text-zinc-600">—</span>
+                      <span className="text-xs text-muted-foreground/50">—</span>
                     )}
                   </td>
 
-                  {/* Date */}
-                  <td className="px-4 py-3 text-xs text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
-                    {formatDate(doc.created_at)}
-                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{formatDate(doc.created_at)}</td>
 
-                  {/* Arrow */}
                   <td className="px-4 py-3">
-                    <ArrowUpRight className="w-4 h-4 text-zinc-300 group-hover:text-primary transition-colors ml-auto" />
+                    <ArrowUpRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary transition-colors ml-auto" />
                   </td>
                 </tr>
               ))
@@ -478,12 +421,10 @@ export default function DocumentsPage() {
           </tbody>
         </table>
 
-        {/* Footer count */}
         {!isLoading && filtered.length > 0 && (
-          <div className="border-t border-zinc-100 dark:border-zinc-800 px-4 py-2.5 bg-zinc-50/50 dark:bg-zinc-800/20">
-            <p className="text-xs text-zinc-400 dark:text-zinc-500">
-              Showing {filtered.length} of {documents.length} document
-              {documents.length !== 1 ? 's' : ''}
+          <div className="border-t border-border px-4 py-2.5 bg-muted/20">
+            <p className="text-xs text-muted-foreground">
+              Showing {filtered.length} of {documents.length} document{documents.length !== 1 ? 's' : ''}
             </p>
           </div>
         )}

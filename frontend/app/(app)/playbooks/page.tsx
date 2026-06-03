@@ -40,7 +40,7 @@ const STATUS_FILTER_OPTIONS = [
 
 function StatusBadge({ status }: { status: PlaybookStatus }) {
   const map: Record<PlaybookStatus, { cls: string; icon: React.ComponentType<{ className?: string }> }> = {
-    draft: { cls: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400', icon: FileText },
+    draft: { cls: 'bg-muted text-muted-foreground', icon: FileText },
     active: { cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400', icon: CheckCircle2 },
     archived: { cls: 'bg-violet-50 text-violet-700 dark:bg-violet-950/60 dark:text-violet-400', icon: Archive },
   };

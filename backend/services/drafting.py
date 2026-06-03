@@ -12,6 +12,7 @@ from apps.documents.models import Document
 from apps.matters.models import Matter
 from apps.vault.models import ClauseVaultEntry
 from services.llmrouter import LLMRouter
+from services.prompts import drafting_prompt
 from services.qdrant_client import QdrantClient
 from services.storage import StorageService
 
@@ -110,19 +111,7 @@ class DraftingService:
             preferred, used_ids = self._preferred_clauses(query_text=query_text, category=category_hint, limit=5)
 
         preferred_block = "\n\n".join([f"- {c['label']} ({c['category']}):\n{c['text']}" for c in preferred])
-        prompt = (
-            "You are LexAI, a senior legal drafter. Generate a first draft that is legally coherent, "
-            "uses professional legal formatting, and aligns with organization-preferred clause style when provided.\n\n"
-            f"DOCUMENT TYPE: {template_type}\n\n"
-            f"INTAKE INPUTS (JSON):\n{json.dumps(inputs, ensure_ascii=False, indent=2)}\n\n"
-            "PREFERRED CLAUSES (use when applicable, but do not force if not relevant):\n"
-            f"{preferred_block if preferred_block else '(none)'}\n\n"
-            "OUTPUT REQUIREMENTS:\n"
-            "- Return plain text with clear section headings.\n"
-            "- If an input is missing, insert a bracketed placeholder like [TBD].\n"
-            "- Do not invent factual details.\n"
-            "- Avoid citations; this is drafting.\n"
-        )
+        prompt = drafting_prompt(template_type, inputs, preferred_block)
 
         content = self.router.chat([{"role": "user", "content": prompt}], task='drafting')
         return {

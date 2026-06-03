@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Markdown } from '@/components/ui/markdown';
 import { cn, parseErrorMessage } from '@/lib/utils';
 import {
   FileText,
@@ -708,14 +709,9 @@ export default function DraftsPage() {
               </div>
             </div>
             <div className="p-6 max-h-[520px] overflow-y-auto scrollbar-thin">
-              <pre
-                className={cn(
-                  'whitespace-pre-wrap font-mono text-[13px] leading-relaxed text-foreground/90',
-                  'ai-prose'
-                )}
-              >
-                {draftResult.draft_content}
-              </pre>
+              <div className="ai-prose">
+                <Markdown content={draftResult.draft_content} />
+              </div>
             </div>
           </div>
 

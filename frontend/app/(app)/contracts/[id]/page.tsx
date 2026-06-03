@@ -22,12 +22,15 @@ import {
   X,
   BarChart2,
   Info,
+  ListX,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { contractsApi } from '@/lib/api/contracts';
+import { useToast } from '@/components/ui/toast';
 import { cn, formatDate, riskBadgeClass, statusBadgeClass, parseErrorMessage } from '@/lib/utils';
 import type { ContractClause, Document, Redline, RiskLevel } from '@/lib/types';
+import { Markdown } from '@/components/ui/markdown';
 
 // ─── Risk helpers ─────────────────────────────────────────────────────────────
 
@@ -71,7 +74,7 @@ function riskTextClass(risk: RiskLevel): string {
     high: 'text-orange-600 dark:text-orange-400',
     medium: 'text-amber-600 dark:text-amber-400',
     low: 'text-emerald-600 dark:text-emerald-400',
-    none: 'text-zinc-500 dark:text-zinc-400',
+    none: 'text-muted-foreground',
   };
   return map[risk];
 }
@@ -82,7 +85,7 @@ function riskBorderClass(risk: RiskLevel): string {
     high: 'border-l-orange-500',
     medium: 'border-l-amber-500',
     low: 'border-l-emerald-500',
-    none: 'border-l-zinc-300 dark:border-l-zinc-700',
+    none: 'border-l-border',
   };
   return map[risk];
 }
@@ -112,10 +115,10 @@ function ConfidenceBar({ score }: { score: number }) {
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-xs">
-        <span className="text-zinc-500 dark:text-zinc-400">Confidence</span>
-        <span className="font-semibold text-zinc-700 dark:text-zinc-300">{pct}%</span>
+        <span className="text-muted-foreground">Confidence</span>
+        <span className="font-semibold text-foreground/80">{pct}%</span>
       </div>
-      <div className="h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
+      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
         <div className={cn('h-full rounded-full transition-all', color)} style={{ width: `${pct}%` }} />
       </div>
     </div>
@@ -128,26 +131,26 @@ function LoadingSkeleton() {
   return (
     <div className="h-[calc(100vh-120px)] flex gap-4">
       {/* Left panel */}
-      <div className="w-72 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 space-y-3 shrink-0">
-        <Skeleton className="h-5 w-32 bg-zinc-200 dark:bg-zinc-800" />
-        <Skeleton className="h-9 w-full bg-zinc-200 dark:bg-zinc-800 rounded-lg" />
+      <div className="w-72 bg-card border border-border rounded-xl p-4 space-y-3 shrink-0">
+        <Skeleton className="h-5 w-32 bg-muted" />
+        <Skeleton className="h-9 w-full bg-muted rounded-lg" />
         {Array.from({ length: 7 }).map((_, i) => (
           <div key={i} className="flex items-center gap-3 p-2">
-            <Skeleton className="h-8 w-8 rounded-lg bg-zinc-200 dark:bg-zinc-800 shrink-0" />
+            <Skeleton className="h-8 w-8 rounded-lg bg-muted shrink-0" />
             <div className="flex-1 space-y-1.5">
-              <Skeleton className="h-3.5 w-full bg-zinc-200 dark:bg-zinc-800" />
-              <Skeleton className="h-3 w-16 bg-zinc-200 dark:bg-zinc-800" />
+              <Skeleton className="h-3.5 w-full bg-muted" />
+              <Skeleton className="h-3 w-16 bg-muted" />
             </div>
           </div>
         ))}
       </div>
       {/* Right panel */}
-      <div className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 space-y-4">
-        <Skeleton className="h-6 w-48 bg-zinc-200 dark:bg-zinc-800" />
-        <Skeleton className="h-4 w-full bg-zinc-200 dark:bg-zinc-800" />
-        <Skeleton className="h-4 w-3/4 bg-zinc-200 dark:bg-zinc-800" />
-        <Skeleton className="h-32 w-full bg-zinc-200 dark:bg-zinc-800 rounded-xl" />
-        <Skeleton className="h-20 w-full bg-zinc-200 dark:bg-zinc-800 rounded-xl" />
+      <div className="flex-1 bg-card border border-border rounded-xl p-6 space-y-4">
+        <Skeleton className="h-6 w-48 bg-muted" />
+        <Skeleton className="h-4 w-full bg-muted" />
+        <Skeleton className="h-4 w-3/4 bg-muted" />
+        <Skeleton className="h-32 w-full bg-muted rounded-xl" />
+        <Skeleton className="h-20 w-full bg-muted rounded-xl" />
       </div>
     </div>
   );
@@ -171,6 +174,7 @@ interface RedlineSectionProps {
   redlines: Redline[];
   onRedlineCreated: (r: Redline) => void;
   onRedlineUpdated: (r: Redline) => void;
+  onToast: (opts: { variant: 'success' | 'error'; title: string; description?: string }) => void;
 }
 
 function RedlineSection({
@@ -179,6 +183,7 @@ function RedlineSection({
   redlines,
   onRedlineCreated,
   onRedlineUpdated,
+  onToast,
 }: RedlineSectionProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [revisedText, setRevisedText] = useState('');
@@ -201,6 +206,7 @@ function RedlineSection({
         revised_text: revisedText,
       });
       onRedlineCreated(r);
+      onToast({ variant: 'success', title: 'Redline created' });
       setIsCreating(false);
       setRevisedText('');
     } catch (err) {
@@ -216,8 +222,10 @@ function RedlineSection({
     try {
       const r = await contractsApi.acceptRedline(contractId, redlineId);
       onRedlineUpdated(r);
+      onToast({ variant: 'success', title: 'Redline accepted' });
     } catch (err) {
       setActionError(parseErrorMessage(err));
+      onToast({ variant: 'error', title: 'Action failed', description: parseErrorMessage(err) });
     } finally {
       setActionLoading(null);
     }
@@ -229,8 +237,10 @@ function RedlineSection({
     try {
       const r = await contractsApi.rejectRedline(contractId, redlineId);
       onRedlineUpdated(r);
+      onToast({ variant: 'success', title: 'Redline rejected' });
     } catch (err) {
       setActionError(parseErrorMessage(err));
+      onToast({ variant: 'error', title: 'Action failed', description: parseErrorMessage(err) });
     } finally {
       setActionLoading(null);
     }
@@ -239,7 +249,7 @@ function RedlineSection({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-2">
+        <h3 className="text-sm font-semibold text-foreground/80 flex items-center gap-2">
           <Edit3 className="w-4 h-4" />
           Redlines
         </h3>
@@ -320,7 +330,7 @@ function RedlineSection({
 
       {/* Existing redlines */}
       {pendingRedlines.length === 0 && settledRedlines.length === 0 && !isCreating && (
-        <p className="text-xs text-zinc-400 dark:text-zinc-600 italic">
+        <p className="text-xs text-muted-foreground/60 italic">
           No redlines for this clause yet.
         </p>
       )}
@@ -334,15 +344,15 @@ function RedlineSection({
               ? 'border-emerald-200 dark:border-emerald-900 bg-emerald-50/40 dark:bg-emerald-950/20'
               : redline.status === 'rejected'
               ? 'border-red-200 dark:border-red-900 bg-red-50/40 dark:bg-red-950/20'
-              : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/30',
+              : 'border-border bg-muted/30',
           )}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+              <span className="text-xs font-semibold text-muted-foreground">
                 {redline.user.name}
               </span>
-              <span className="text-[10px] text-zinc-400">
+              <span className="text-[10px] text-muted-foreground/50">
                 {formatDate(redline.created_at)}
               </span>
             </div>
@@ -365,14 +375,14 @@ function RedlineSection({
             {redline.original_text && (
               <div className="rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 px-3 py-2">
                 <p className="font-semibold text-red-600 dark:text-red-400 mb-1">Original</p>
-                <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap line-through opacity-70">
+                <p className="text-foreground/80 leading-relaxed whitespace-pre-wrap line-through opacity-70">
                   {redline.original_text}
                 </p>
               </div>
             )}
             <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50 px-3 py-2">
               <p className="font-semibold text-emerald-600 dark:text-emerald-400 mb-1">Proposed</p>
-              <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">
+              <p className="text-foreground/80 leading-relaxed whitespace-pre-wrap">
                 {redline.revised_text}
               </p>
             </div>
@@ -420,6 +430,7 @@ interface ClauseDetailProps {
   contractId: string;
   onRedlineCreated: (r: Redline) => void;
   onRedlineUpdated: (r: Redline) => void;
+  onToast: (opts: { variant: 'success' | 'error'; title: string; description?: string }) => void;
 }
 
 function ClauseDetail({
@@ -428,13 +439,14 @@ function ClauseDetail({
   contractId,
   onRedlineCreated,
   onRedlineUpdated,
+  onToast,
 }: ClauseDetailProps) {
   return (
     <div className="h-full overflow-y-auto scrollbar-thin p-6 space-y-6">
       {/* Title + badge */}
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-3">
-          <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50 leading-tight">
+          <h2 className="text-lg font-bold text-foreground leading-tight">
             {clause.clause_type}
           </h2>
           <span
@@ -458,13 +470,13 @@ function ClauseDetail({
           className={cn(
             'rounded-xl border-l-4 px-4 py-3 space-y-1',
             riskBorderClass(clause.risk_level),
-            'bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800',
+            'bg-muted/40 border border-border',
           )}
         >
           <p className={cn('text-xs font-semibold uppercase tracking-wide', riskTextClass(clause.risk_level))}>
             Risk Analysis
           </p>
-          <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">
+          <p className="text-sm text-foreground/80 leading-relaxed">
             {clause.risk_reason}
           </p>
         </div>
@@ -472,28 +484,28 @@ function ClauseDetail({
 
       {/* Clause text */}
       <div className="space-y-2">
-        <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
           <FileText className="w-3.5 h-3.5" />
           Clause Text
         </p>
-        <div className="rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 px-4 py-3">
-          <p className="text-sm text-zinc-800 dark:text-zinc-200 leading-relaxed whitespace-pre-wrap">
+        <div className="rounded-xl bg-muted/40 border border-border px-4 py-3">
+          <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap">
             {clause.raw_text}
           </p>
         </div>
-        <p className="text-[11px] text-zinc-400 dark:text-zinc-600">
+        <p className="text-[11px] text-muted-foreground/60">
           Page {clause.page_number} &middot; Characters {clause.start_char}–{clause.end_char}
         </p>
       </div>
 
       {/* Standard deviation */}
       {clause.standard_deviation && (
-        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/30 px-4 py-3 space-y-1">
-          <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+        <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 space-y-1">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
             <Info className="w-3.5 h-3.5" />
             Standard Deviation
           </p>
-          <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">
+          <p className="text-sm text-foreground/80 leading-relaxed">
             {clause.standard_deviation}
           </p>
         </div>
@@ -506,14 +518,14 @@ function ClauseDetail({
             <Sparkles className="w-3.5 h-3.5" />
             AI Suggested Revision
           </p>
-          <p className="text-sm text-zinc-800 dark:text-zinc-200 leading-relaxed whitespace-pre-wrap">
-            {clause.suggested_revision}
-          </p>
+          <div className="ai-prose text-sm">
+            <Markdown content={clause.suggested_revision} />
+          </div>
         </div>
       )}
 
       {/* Divider */}
-      <div className="border-t border-zinc-200 dark:border-zinc-800" />
+      <div className="border-t border-border" />
 
       {/* Redlines */}
       <RedlineSection
@@ -522,6 +534,7 @@ function ClauseDetail({
         redlines={redlines}
         onRedlineCreated={onRedlineCreated}
         onRedlineUpdated={onRedlineUpdated}
+        onToast={onToast}
       />
     </div>
   );
@@ -532,11 +545,11 @@ function ClauseDetail({
 function EmptyClauseDetail() {
   return (
     <div className="h-full flex flex-col items-center justify-center gap-3 text-center p-8">
-      <div className="w-16 h-16 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-        <FileText className="w-8 h-8 text-zinc-300 dark:text-zinc-600" />
+      <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center">
+        <FileText className="w-8 h-8 text-muted-foreground/30" />
       </div>
-      <p className="font-semibold text-zinc-500 dark:text-zinc-400">No clause selected</p>
-      <p className="text-sm text-zinc-400 dark:text-zinc-600">
+      <p className="font-semibold text-muted-foreground">No clause selected</p>
+      <p className="text-sm text-muted-foreground/60">
         Click a clause in the left panel to view its analysis and redlines.
       </p>
     </div>
@@ -548,6 +561,7 @@ function EmptyClauseDetail() {
 export default function ContractReviewPage() {
   const params = useParams();
   const id = params.id as string;
+  const { toast } = useToast();
 
   const [contract, setContract] = useState<(Document & { download_url?: string }) | null>(null);
   const [clauses, setClauses] = useState<ContractClause[]>([]);
@@ -558,10 +572,14 @@ export default function ContractReviewPage() {
   const [selectedClauseId, setSelectedClauseId] = useState<string | null>(null);
   const [riskFilter, setRiskFilter] = useState<RiskLevel | 'all'>('all');
 
+  const [missingClauses, setMissingClauses] = useState<string[]>([]);
+  const [missingDocType, setMissingDocType] = useState('');
+  const [missingLoading, setMissingLoading] = useState(false);
+
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
-  const fetchAll = useCallback(async () => {
-    setIsLoading(true);
+  const fetchAll = useCallback(async (silent = false) => {
+    if (!silent) setIsLoading(true);
     setError(null);
     try {
       const [contractData, clausesData] = await Promise.all([
@@ -571,7 +589,7 @@ export default function ContractReviewPage() {
       setContract(contractData);
       setClauses(clausesData);
       // Select highest-risk clause by default
-      if (clausesData.length > 0) {
+      if (clausesData.length > 0 && !selectedClauseId) {
         const sorted = [...clausesData].sort(
           (a, b) => RISK_WEIGHTS[b.risk_level] - RISK_WEIGHTS[a.risk_level],
         );
@@ -580,13 +598,34 @@ export default function ContractReviewPage() {
     } catch (err) {
       setError(parseErrorMessage(err));
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
-  }, [id]);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
+
+  // Poll every 5 s while the document is still being processed
+  useEffect(() => {
+    if (!contract) return;
+    if (contract.parse_status !== 'processing' && contract.parse_status !== 'pending') return;
+    const timer = setInterval(() => fetchAll(true), 5000);
+    return () => clearInterval(timer);
+  }, [contract?.parse_status, fetchAll]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch missing clauses once document is complete
+  useEffect(() => {
+    if (!contract || contract.parse_status !== 'completed') return;
+    setMissingLoading(true);
+    contractsApi.getMissingClauses(id)
+      .then((data) => {
+        setMissingClauses(data.missing ?? []);
+        setMissingDocType(data.document_type ?? '');
+      })
+      .catch(() => {})
+      .finally(() => setMissingLoading(false));
+  }, [id, contract?.parse_status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Filtered clauses ───────────────────────────────────────────────────────
 
@@ -664,7 +703,7 @@ export default function ContractReviewPage() {
               Back to Documents
             </Button>
           </Link>
-          <Button onClick={fetchAll} className="flex items-center gap-1.5">
+          <Button onClick={() => fetchAll()} className="flex items-center gap-1.5">
             <Loader2 className="w-4 h-4" />
             Retry
           </Button>
@@ -681,15 +720,15 @@ export default function ContractReviewPage() {
       <div className="flex items-center justify-between gap-4 shrink-0">
         <div className="flex items-center gap-3 min-w-0">
           <Link href="/documents">
-            <button className="shrink-0 flex items-center gap-1 text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+            <button className="shrink-0 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
               <ArrowLeft className="w-4 h-4" />
               Documents
             </button>
           </Link>
-          <ChevronRight className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 shrink-0" />
           <div className="flex items-center gap-2 min-w-0">
-            <FileText className="w-4 h-4 text-zinc-400 shrink-0" />
-            <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 truncate">
+            <FileText className="w-4 h-4 text-muted-foreground/50 shrink-0" />
+            <span className="text-sm font-semibold text-foreground truncate">
               {contract.file_name}
             </span>
             <span
@@ -711,7 +750,7 @@ export default function ContractReviewPage() {
 
         <div className="flex items-center gap-2 shrink-0">
           {contract.parse_status !== 'completed' && (
-            <p className="text-xs text-zinc-400 dark:text-zinc-500">
+            <p className="text-xs text-muted-foreground/50">
               {contract.parse_status === 'processing'
                 ? 'AI is analyzing this contract…'
                 : contract.parse_status === 'pending'
@@ -756,14 +795,14 @@ export default function ContractReviewPage() {
       {/* Split pane */}
       <div className="flex gap-4 flex-1 min-h-0">
         {/* LEFT: Clause navigator */}
-        <div className="w-72 shrink-0 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl flex flex-col overflow-hidden">
+        <div className="w-72 shrink-0 bg-card border border-border rounded-xl flex flex-col overflow-hidden">
           {/* Overall risk summary */}
-          <div className="px-4 pt-4 pb-3 border-b border-zinc-100 dark:border-zinc-800 space-y-3">
+          <div className="px-4 pt-4 pb-3 border-b border-border space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Clause Navigator
               </h2>
-              <span className="text-xs text-zinc-400">{clauses.length} clauses</span>
+              <span className="text-xs text-muted-foreground/50">{clauses.length} clauses</span>
             </div>
 
             {/* Overall risk badge */}
@@ -795,8 +834,38 @@ export default function ContractReviewPage() {
             </div>
           </div>
 
+          {/* Missing clauses */}
+          {(missingLoading || missingClauses.length > 0) && (
+            <div className="px-4 pt-3 pb-3 border-b border-border space-y-2">
+              <div className="flex items-center gap-1.5">
+                <ListX className="w-3.5 h-3.5 text-amber-500" />
+                <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Missing Clauses
+                </span>
+                {missingDocType && (
+                  <span className="ml-auto text-[10px] text-muted-foreground/50">{missingDocType}</span>
+                )}
+              </div>
+              {missingLoading ? (
+                <div className="space-y-1.5">
+                  <Skeleton className="h-3 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              ) : (
+                <ul className="space-y-1">
+                  {missingClauses.map((c) => (
+                    <li key={c} className="flex items-center gap-1.5 text-[11px] text-amber-600 dark:text-amber-400">
+                      <div className="w-1 h-1 rounded-full bg-amber-500 shrink-0" />
+                      {c}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
           {/* Risk filter */}
-          <div className="px-2 pt-2 pb-1 border-b border-zinc-100 dark:border-zinc-800">
+          <div className="px-2 pt-2 pb-1 border-b border-border">
             <div className="flex flex-wrap gap-1">
               {RISK_FILTERS.map((f) => (
                 <button
@@ -806,7 +875,7 @@ export default function ContractReviewPage() {
                     'px-2 py-1 rounded-md text-[11px] font-semibold transition-colors',
                     riskFilter === f.value
                       ? 'bg-primary text-primary-foreground'
-                      : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800',
+                      : 'text-muted-foreground hover:bg-accent',
                   )}
                 >
                   {f.label}
@@ -828,11 +897,11 @@ export default function ContractReviewPage() {
           {/* Clause list */}
           <div className="flex-1 overflow-y-auto scrollbar-thin">
             {filteredClauses.length === 0 ? (
-              <div className="p-6 text-center text-sm text-zinc-400 dark:text-zinc-600">
+              <div className="p-6 text-center text-sm text-muted-foreground/60">
                 No clauses{riskFilter !== 'all' ? ` with ${riskFilter} risk` : ''}.
               </div>
             ) : (
-              <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+              <div className="divide-y divide-border">
                 {filteredClauses.map((clause) => {
                   const isSelected = clause.id === selectedClauseId;
                   const clauseRedlineCount = clauseRedlines[clause.id]?.length ?? 0;
@@ -845,7 +914,7 @@ export default function ContractReviewPage() {
                         'w-full text-left px-4 py-3 transition-colors flex items-start gap-3',
                         isSelected
                           ? 'bg-primary/8 dark:bg-primary/15 border-r-2 border-r-primary'
-                          : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/40',
+                          : 'hover:bg-muted/40',
                       )}
                     >
                       {/* Risk dot */}
@@ -856,7 +925,7 @@ export default function ContractReviewPage() {
                           clause.risk_level === 'high' && 'bg-orange-500',
                           clause.risk_level === 'medium' && 'bg-amber-500',
                           clause.risk_level === 'low' && 'bg-emerald-500',
-                          clause.risk_level === 'none' && 'bg-zinc-400',
+                          clause.risk_level === 'none' && 'bg-muted-foreground/30',
                         )}
                       />
                       <div className="flex-1 min-w-0 space-y-1">
@@ -865,7 +934,7 @@ export default function ContractReviewPage() {
                             'text-sm font-medium leading-tight truncate',
                             isSelected
                               ? 'text-primary'
-                              : 'text-zinc-800 dark:text-zinc-200',
+                              : 'text-foreground/90',
                           )}
                         >
                           {clause.clause_type}
@@ -879,7 +948,7 @@ export default function ContractReviewPage() {
                           >
                             {RISK_LABELS[clause.risk_level]}
                           </span>
-                          <span className="text-[10px] text-zinc-400">
+                          <span className="text-[10px] text-muted-foreground/50">
                             {Math.round(clause.confidence_score * 100)}% conf.
                           </span>
                           {clauseRedlineCount > 0 && (
@@ -898,7 +967,7 @@ export default function ContractReviewPage() {
         </div>
 
         {/* RIGHT: Clause detail */}
-        <div className="flex-1 min-w-0 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden">
+        <div className="flex-1 min-w-0 bg-card border border-border rounded-xl overflow-hidden">
           {selectedClause ? (
             <ClauseDetail
               key={selectedClause.id}
@@ -907,6 +976,7 @@ export default function ContractReviewPage() {
               contractId={id}
               onRedlineCreated={handleRedlineCreated}
               onRedlineUpdated={handleRedlineUpdated}
+              onToast={toast}
             />
           ) : (
             <EmptyClauseDetail />

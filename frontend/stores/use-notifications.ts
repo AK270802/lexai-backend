@@ -37,7 +37,7 @@ export const useNotifications = create<NotificationsState>((set) => ({
     const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : '';
     if (!token) return;
 
-    ws = new WebSocket(`${WS_BASE}/notifications/?token=${token}`);
+    ws = new WebSocket(`${WS_BASE}/ws/notifications/?token=${token}`);
     ws.onopen = () => set({ isConnected: true });
     ws.onmessage = (e) => {
       try {

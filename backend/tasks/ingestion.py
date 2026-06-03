@@ -2,15 +2,15 @@ import os
 import logging
 import tempfile
 from celery import shared_task
-from django.conf import settings
 from apps.documents.models import Document, DocumentChunk
 from utils.doclingextractor import DoclingExtractor
 from services.storage import StorageService
-from services.llmrouter import LLMRouter
+from services.embedding_service import EmbeddingService
 from services.qdrant_client import QdrantClient
 from tasks.contracts import extract_contract_clauses
 
 logger = logging.getLogger(__name__)
+
 
 @shared_task
 def process_document_ingestion(document_id):
@@ -21,89 +21,73 @@ def process_document_ingestion(document_id):
 
         storage = StorageService()
         extractor = DoclingExtractor()
-        router = LLMRouter(organization_id=str(document.organization.id))
+        embedder = EmbeddingService.get_instance()
         qdrant = QdrantClient()
         qdrant.ensure_collections()
 
-        # Download file to a temporary location
         with tempfile.NamedTemporaryFile(delete=False, suffix=f".{document.file_type.split('/')[-1]}") as tmp:
             logger.info(f"Downloading document {document.id} to {tmp.name}")
             if not storage.download_file(document.storage_path, tmp.name):
                 raise Exception("Failed to download document from storage.")
-            
-            # Perform extraction
+
             extraction = extractor.extract_layout(tmp.name)
-            
-            # Store chunks and generate embeddings
-            chunks_to_upsert = []
-            
-            # Process text blocks
+
+            # Collect all content items (blocks + tables) before embedding
+            items = []
             for i, block in enumerate(extraction["blocks"]):
-                # Create PostgreSQL entry
                 chunk_obj = DocumentChunk.objects.create(
                     document=document,
                     chunk_index=i,
                     content=block["text"],
-                    bbox_coords={
-                        "bbox": block["bbox"],
-                        "type": block["type"]
-                    },
-                    page_number=block["page_no"]
+                    bbox_coords={"bbox": block["bbox"], "type": block["type"]},
+                    page_number=block["page_no"],
                 )
-                
-                # Generate embedding
-                embedding = router.embed(block["text"])
-                
-                # Prepare for Qdrant upsert
-                chunks_to_upsert.append({
-                    "id": str(chunk_obj.id),
-                    "vector": embedding,
-                    "org_id": str(document.organization.id),
-                    "document_id": str(document.id),
-                    "matter_id": str(document.matter.id) if document.matter else None,
-                    "page_number": block["page_no"],
+                items.append({
+                    "chunk_obj": chunk_obj,
                     "text": block["text"],
-                    "metadata": {
-                        "type": block["type"],
-                        "bbox": block["bbox"]
-                    }
+                    "page_no": block["page_no"],
+                    "type": block["type"],
+                    "bbox": block["bbox"],
                 })
-            
-            # Process tables as well
+
             table_offset = len(extraction["blocks"])
             for i, table in enumerate(extraction["tables"]):
                 chunk_obj = DocumentChunk.objects.create(
                     document=document,
                     chunk_index=table_offset + i,
                     content=table["text"],
-                    bbox_coords={
-                        "bbox": table["bbox"],
-                        "type": "table"
-                    },
-                    page_number=table["page_no"]
+                    bbox_coords={"bbox": table["bbox"], "type": "table"},
+                    page_number=table["page_no"],
                 )
-                
-                embedding = router.embed(table["text"])
-                
-                chunks_to_upsert.append({
-                    "id": str(chunk_obj.id),
-                    "vector": embedding,
-                    "org_id": str(document.organization.id),
-                    "document_id": str(document.id),
-                    "matter_id": str(document.matter.id) if document.matter else None,
-                    "page_number": table["page_no"],
+                items.append({
+                    "chunk_obj": chunk_obj,
                     "text": table["text"],
-                    "metadata": {
-                        "type": "table",
-                        "bbox": table["bbox"]
-                    }
+                    "page_no": table["page_no"],
+                    "type": "table",
+                    "bbox": table["bbox"],
                 })
 
-            # Upsert all chunks to Qdrant
-            if chunks_to_upsert:
+            # Batch-embed all texts in one pass
+            if items:
+                texts = [item["text"] for item in items]
+                embeddings = embedder.embed_batch(texts)
+
+                chunks_to_upsert = []
+                for item, embedding in zip(items, embeddings):
+                    chunks_to_upsert.append({
+                        "id": str(item["chunk_obj"].id),
+                        "vector": embedding,
+                        "org_id": str(document.organization.id),
+                        "document_id": str(document.id),
+                        "matter_id": str(document.matter.id) if document.matter else None,
+                        "page_number": item["page_no"],
+                        "text": item["text"],
+                        "metadata": {"type": item["type"], "bbox": item["bbox"]},
+                    })
+
                 qdrant.upsert_document_chunks(chunks_to_upsert)
-            
-            # Clean up temporary file
+                logger.info(f"Upserted {len(chunks_to_upsert)} chunks for document {document.id}")
+
             os.unlink(tmp.name)
 
         document.parse_status = 'completed'
